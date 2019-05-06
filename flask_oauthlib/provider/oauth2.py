@@ -8,18 +8,20 @@
     :copyright: (c) 2013 - 2014 by Hsiaoming Yang.
 """
 
-import os
-import logging
-import datetime
-from functools import wraps
-from flask import request, url_for
+import json
+from ..utils import extract_params, decode_base64, create_response
 from flask import redirect, abort
+from flask import request, url_for
+from functools import wraps
+from oauthlib import oauth2
+from oauthlib.common import to_unicode, add_params_to_uri
+from oauthlib.oauth2 import RequestValidator, Server
 from werkzeug import cached_property
 from werkzeug.utils import import_string
-from oauthlib import oauth2
-from oauthlib.oauth2 import RequestValidator, Server
-from oauthlib.common import to_unicode, add_params_to_uri
-from ..utils import extract_params, decode_base64, create_response
+import datetime
+import logging
+import os
+import urllib.parse as urlparse
 
 __all__ = ('OAuth2Provider', 'OAuth2RequestValidator')
 
@@ -551,10 +553,17 @@ class OAuth2Provider(object):
             uri, http_method, body, headers = extract_params()
             credentials = f(*args, **kwargs) or {}
             log.debug('Fetched extra credentials, %r.', credentials)
-            ret = server.create_token_response(
+            a, b, c = server.create_token_response(
                 uri, http_method, body, headers, credentials
             )
-            return create_response(*ret)
+            # Hack: to ignore the client token expiry config.
+            # Using `accesstokenttl` instead.
+            parsed = urlparse.urlparse(uri)
+            ttl = urlparse.parse_qs(parsed.query)['accesstokenttl']
+            b2 = json.loads(b)
+            b2['expires_in'] = int(ttl[0])
+            b3 = json.dumps(b2)
+            return create_response(a, b3, c)
         return decorated
 
     def revoke_handler(self, f):
