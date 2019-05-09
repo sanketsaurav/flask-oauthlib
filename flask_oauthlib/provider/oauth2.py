@@ -558,12 +558,13 @@ class OAuth2Provider(object):
             )
             # Hack: to ignore the client token expiry config.
             # Using `accesstokenttl` instead.
-            parsed = urlparse.urlparse(uri)
-            ttl = urlparse.parse_qs(parsed.query)['accesstokenttl']
-            b2 = json.loads(b)
-            b2['expires_in'] = int(ttl[0])
-            b3 = json.dumps(b2)
-            return create_response(a, b3, c)
+            if c == 200:
+                parsed = urlparse.urlparse(uri)
+                ttl = urlparse.parse_qs(parsed.query)['accesstokenttl']
+                b2 = json.loads(b)
+                b2['expires_in'] = int(ttl[0])
+                b = json.dumps(b2)
+            return create_response(a, b, c)
         return decorated
 
     def revoke_handler(self, f):
