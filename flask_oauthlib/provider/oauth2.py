@@ -558,9 +558,9 @@ class OAuth2Provider(object):
             )
             # Hack: to ignore the client token expiry config.
             # Using `accesstokenttl` instead.
-            if c == 200:
-                parsed = urlparse.urlparse(uri)
-                ttl = urlparse.parse_qs(parsed.query)['accesstokenttl']
+            parsed = urlparse.urlparse(uri)
+            ttl = urlparse.parse_qs(parsed.query).get('accesstokenttl', None)
+            if c == 200 and ttl:
                 b2 = json.loads(b)
                 b2['expires_in'] = int(ttl[0])
                 b = json.dumps(b2)
